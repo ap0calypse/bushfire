@@ -1,0 +1,122 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use Curses;
+use Time::HiRes qw(usleep);
+
+# name:     bushfire
+# author:   Manuel Fill (ap0calypse@agitatio.org)
+# license:  if not specified, it's under GPL
+# date:     2011-03-01
+
+my $area;
+my ($length, $height) = (80,30);
+
+# the upper level for vegetation
+my $MAX_VEG = 8;
+
+for my $x (1 .. $length) {
+    for my $y (1 .. $height) {
+        $area->{"$x:$y"} = int rand($MAX_VEG) + 1;
+    }
+}
+
+sub print_area {
+    initscr;
+    my $cycle = shift;
+    if($LINES < ($height + 2) || $COLS < ($length + 5)) {
+        endwin;
+        die "Your terminal needs to be e bigger\n";
+    }
+    clear;
+    noecho;
+
+    start_color;
+    init_pair(1, COLOR_RED, COLOR_BLACK); # ACTIVE FIRE
+    init_pair(2, COLOR_BLACK, COLOR_BLACK); # GLOWING AFTER FIRE
+    init_pair(3, COLOR_YELLOW, COLOR_BLACK); # PLANTS soon burning
+    init_pair(4, COLOR_GREEN, COLOR_BLACK); # PLANTS
+
+    for my $coords (keys %{$area}) {
+         if ($area->{$coords} == 0) { # burn motherfucker .. burn
+            attron(COLOR_PAIR(1));
+            attron(A_BOLD);
+            my ($x, $y) = split /:/, $coords;
+            addstr($y, $x, "~");
+            attroff(A_BOLD);
+            attroff(COLOR_PAIR(1));
+         }
+         elsif ($area->{$coords} < 0) { # empty, burned field 
+            attron(COLOR_PAIR(2));
+            my ($x, $y) = split /:/, $coords;
+            addstr($y, $x, "");
+            attroff(COLOR_PAIR(2));
+         }
+         elsif ($area->{$coords} == 1) { # small vegetation very likely to burn
+            attron(COLOR_PAIR(3));
+            my ($x, $y) = split /:/, $coords;
+            addstr($y, $x, ":");
+            attroff(COLOR_PAIR(3));
+         }
+         elsif ($area->{$coords} > 1 && $area->{$coords} < 5) { # normal vegetation
+            attron(COLOR_PAIR(4));
+            my ($x, $y) = split /:/, $coords;
+            addstr($y, $x, "=");
+            attroff(COLOR_PAIR(4));
+         }
+         else { # heavy rainforest, very unlikely to burn
+            attron(COLOR_PAIR(4)); 
+            attron(A_BOLD);
+            my ($x, $y) = split /:/, $coords;
+            attroff(A_BOLD);
+            addstr($y, $x, "#");
+            attroff(COLOR_PAIR(4));
+         }
+    }
+    attron(COLOR_PAIR(1));
+    addstr($height + 2, 5, "Cycle: $cycle");
+    attroff(COLOR_PAIR(1));
+    refresh;
+}
+
+my $cy = 0;
+
+sub start_fire {
+    for (keys %{$area}) {
+        if ($area->{$_} == 1) {
+            $area->{$_}--;
+            last;
+        }
+    }
+}
+
+while (1) {
+    $cy++;
+    my @decrement;
+    for my $coords (keys %{$area}) {
+        if ($area->{$coords} == 0) {
+            my ($x, $y) = split /:/, $coords;
+            my ($l_x, $u_x, $l_y, $u_y) = ($x-1,$x+1,$y-1,$y+1);
+            for my $X ($l_x .. $u_x) {
+                for my $Y ($l_y .. $u_y) {
+                    $area->{"$X:$Y"}-- if defined $area->{"$X:$Y"};
+                    push @decrement, "$X:$Y" if defined $area->{"$X:$Y"};
+                }
+            }
+        }
+        if (($cy%100) == 0) { # plants grow
+            $area->{$coords}++ if $area->{$coords} > 0 && $area->{$coords} < $MAX_VEG;
+            $area->{$coords} = (int(rand 2) + 1) if $area->{$coords} < 0;
+        }
+    }
+    for (@decrement) { # burn it down
+        $area->{$_}-- if $area->{$_} > 0;
+    }
+
+    if (int rand(100) < 2) { # possibility of starting a fire ( 2 % )
+        &start_fire;
+    }
+    &print_area($cy);
+    usleep(200000);
+}
+
