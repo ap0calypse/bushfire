@@ -1,6 +1,5 @@
 #!/usr/bin/perl
 use strict;
-use warnings;
 use Curses;
 use Time::HiRes qw(usleep);
 
@@ -105,7 +104,7 @@ while (1) {
             }
         }
         if (($cy%100) == 0) { # plants grow
-            $area->{$coords}++ if $area->{$coords} > 0 && $area->{$coords} < $MAX_VEG;
+            $area->{$coords} += (int rand(3)) if $area->{$coords} > 0 && $area->{$coords} < $MAX_VEG;
             $area->{$coords} = (int(rand 2) + 1) if $area->{$coords} < 0;
         }
     }
