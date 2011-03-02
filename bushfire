@@ -6,27 +6,39 @@ use Time::HiRes qw(usleep);
 # name:     bushfire
 # author:   Manuel Fill (ap0calypse@agitatio.org)
 # license:  if not specified, it's under GPL
-# date:     2011-03-01
 
 my $area;
-my ($length, $height) = (80,30);
 
-# the upper level for vegetation
-my $MAX_VEG = 8;
+print "Welcome to bushfire!\n" .
+      "The program needs some information now:\n\n";
+
+print "How long should the area be? (leave blank for maximum): ";
+chomp(my $length = <STDIN>);
+print "How high should the area be? (leave blank for maximum): ";
+chomp(my $height = <STDIN>);
+print "Maximum level for vegetation (lower means easier burn-able, leave blank for default; default is 7): ";
+chomp(my $max_veg = <STDIN>);
+print "Percentage for starting a fire (leave blank for default; default is 1): ";
+chomp(my $percentage = <STDIN>);
+print "Microseconds between screen refreshs (leave blank for default; default is 100000): ";
+chomp(my $microsecs = <STDIN>);
+
+$max_veg = 7 if $max_veg !~ m/\d+/;
+$microsecs = 100000 if $microsecs !~ m/\d+/;
+$percentage = 1 if $percentage !~ m/\d+/;
+
+initscr;
+if($length eq "" || $length > $COLS - 2) { $length = $COLS - 2; }
+if($height eq "" || $height > $LINES - 3) { $height = $LINES - 3; }
 
 for my $x (1 .. $length) {
     for my $y (1 .. $height) {
-        $area->{"$x:$y"} = int rand($MAX_VEG) + 1;
+        $area->{"$x:$y"} = int rand($max_veg) + 1;
     }
 }
 
 sub print_area {
-    initscr;
     my $cycle = shift;
-    if($LINES < ($height + 2) || $COLS < ($length + 5)) {
-        endwin;
-        die "Your terminal needs to be e bigger\n";
-    }
     clear;
     noecho;
 
@@ -104,7 +116,7 @@ while (1) {
             }
         }
         if (($cy%100) == 0) { # plants grow
-            $area->{$coords} += (int rand(3)) if $area->{$coords} > 0 && $area->{$coords} < $MAX_VEG;
+            $area->{$coords} += (int rand(3)) if $area->{$coords} > 0 && $area->{$coords} < $max_veg;
             $area->{$coords} = (int(rand 2) + 1) if $area->{$coords} < 0;
         }
     }
@@ -112,10 +124,10 @@ while (1) {
         $area->{$_}-- if $area->{$_} > 0;
     }
 
-    if (int rand(100) < 2) { # possibility of starting a fire ( 2 % )
+    if (int rand(100) < $percentage) { # possibility of starting a fire ( 2 % )
         &start_fire;
     }
     &print_area($cy);
-    usleep(200000);
+    usleep($microsecs);
 }
 
