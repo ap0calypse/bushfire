@@ -93,12 +93,13 @@ sub print_area {
 my $cy = 0;
 
 sub start_fire {
+    my @burnables;
     for (keys %{$area}) {
         if ($area->{$_} == 1) {
-            $area->{$_}--;
-            last;
+            push @burnables, $_;
         }
     }
+    $area->{$burnables[rand scalar @burnables]}--;
 }
 
 while (1) {
