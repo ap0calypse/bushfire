@@ -106,6 +106,9 @@ sub start_fire {
 
 while (1) {
     $cy++;
+    if (int rand(100) < $percentage) { # possibility of starting a fire ( 2 % )
+        &start_fire;
+    }
     my @decrement;
     for my $coords (keys %{$area}) {
         if ($area->{$coords} == 0) {
@@ -125,10 +128,6 @@ while (1) {
     }
     for (@decrement) { # burn it down
         $area->{$_}-- if $area->{$_} > 0;
-    }
-
-    if (int rand(100) < $percentage) { # possibility of starting a fire ( 2 % )
-        &start_fire;
     }
     &print_area($cy);
     usleep($microsecs);
