@@ -3,6 +3,7 @@ use strict;
 use Curses;
 use Time::HiRes qw(usleep);
 
+
 # name:     bushfire
 # author:   Manuel Fill (ap0calypse@agitatio.org)
 # license:  if not specified, it's under GPL
@@ -49,8 +50,11 @@ sub print_area {
     init_pair(4, COLOR_GREEN, COLOR_BLACK); # PLANTS
     my $win = newwin($height + 2, $length + 2, 0, 0);
     box($win,0,0);
+    my ($f, $f_b, $f_0, $f_1, $f_2, $f_3) = (0,0,0,0,0,0);
     for my $coords (keys %{$area}) {
+        $f++;
          if ($area->{$coords} == 0) { # burn motherfucker .. burn
+            $f_0++;
             attron($win,COLOR_PAIR(1));
             attron($win,A_BOLD);
             my ($x, $y) = split /:/, $coords;
@@ -59,34 +63,39 @@ sub print_area {
             attroff($win,COLOR_PAIR(1));
          }
          elsif ($area->{$coords} < 0) { # empty, burned field 
+            $f_b++;
             attron($win,COLOR_PAIR(2));
             my ($x, $y) = split /:/, $coords;
             addstr($win, $y, $x, "");
             attroff($win,COLOR_PAIR(2));
          }
          elsif ($area->{$coords} == 1) { # small vegetation very likely to burn
+            $f_1++;
             attron($win,COLOR_PAIR(3));
             my ($x, $y) = split /:/, $coords;
-            addstr($win, $y, $x, "-");
+            addstr($win, $y, $x, ".");
             attroff($win,COLOR_PAIR(3));
          }
          elsif ($area->{$coords} > 1 && $area->{$coords} < 5) { # normal vegetation
+            $f_2++;
             attron($win,COLOR_PAIR(4));
             my ($x, $y) = split /:/, $coords;
-            addstr($win,$y, $x, "+");
+            addstr($win,$y, $x, ":");
             attroff($win,COLOR_PAIR(4));
          }
          else { # heavy rainforest, very unlikely to burn
+            $f_3++;
             attron($win,COLOR_PAIR(4)); 
             attron($win,A_BOLD);
             my ($x, $y) = split /:/, $coords;
             attroff($win,A_BOLD);
-            addstr($win, $y, $x, "#");
+            addstr($win, $y, $x, "|");
             attroff($win,COLOR_PAIR(4));
          }
     }
     attron(COLOR_PAIR(1));
-    addstr($win, 0,2 , "| Cycle: $cycle |");
+    addstr($win, 0,2 , "| Cycle: $cycle | Fields: $f | Burning: $f_0 | " .
+                       "Burnt: $f_b | grass fiels: $f_1 | shrub fields: $f_2 | tree fields $f_3 |");
     attroff(COLOR_PAIR(1));
     refresh($win);
     doupdate;
@@ -125,7 +134,7 @@ while (1) {
         if (($cy%100) == 0) { # plants grow, and die
             $area->{$coords} += (int rand(3)) if $area->{$coords} > 0 && $area->{$coords} < $max_veg;
             $area->{$coords} = (int(rand 2) + 1) if $area->{$coords} < 0;
-            $area->{$coords} -= (int rand($max_veg)) if $area->{$coords} == $max_veg;
+            $area->{$coords} -= (int rand($max_veg)) if $area->{$coords} >= $max_veg;
         }
     }
     for (@decrement) { # burn it down
