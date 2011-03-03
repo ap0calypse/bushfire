@@ -47,47 +47,49 @@ sub print_area {
     init_pair(2, COLOR_BLACK, COLOR_BLACK); # GLOWING AFTER FIRE
     init_pair(3, COLOR_YELLOW, COLOR_BLACK); # PLANTS soon burning
     init_pair(4, COLOR_GREEN, COLOR_BLACK); # PLANTS
-
+    my $win = newwin($height + 2, $length + 2, 0, 0);
+    box($win,0,0);
     for my $coords (keys %{$area}) {
          if ($area->{$coords} == 0) { # burn motherfucker .. burn
-            attron(COLOR_PAIR(1));
-            attron(A_BOLD);
+            attron($win,COLOR_PAIR(1));
+            attron($win,A_BOLD);
             my ($x, $y) = split /:/, $coords;
-            addstr($y, $x, "~");
-            attroff(A_BOLD);
-            attroff(COLOR_PAIR(1));
+            addstr($win, $y, $x, "~");
+            attroff($win,A_BOLD);
+            attroff($win,COLOR_PAIR(1));
          }
          elsif ($area->{$coords} < 0) { # empty, burned field 
-            attron(COLOR_PAIR(2));
+            attron($win,COLOR_PAIR(2));
             my ($x, $y) = split /:/, $coords;
-            addstr($y, $x, "");
-            attroff(COLOR_PAIR(2));
+            addstr($win, $y, $x, "");
+            attroff($win,COLOR_PAIR(2));
          }
          elsif ($area->{$coords} == 1) { # small vegetation very likely to burn
-            attron(COLOR_PAIR(3));
+            attron($win,COLOR_PAIR(3));
             my ($x, $y) = split /:/, $coords;
-            addstr($y, $x, ":");
-            attroff(COLOR_PAIR(3));
+            addstr($win, $y, $x, ":");
+            attroff($win,COLOR_PAIR(3));
          }
          elsif ($area->{$coords} > 1 && $area->{$coords} < 5) { # normal vegetation
-            attron(COLOR_PAIR(4));
+            attron($win,COLOR_PAIR(4));
             my ($x, $y) = split /:/, $coords;
-            addstr($y, $x, "=");
-            attroff(COLOR_PAIR(4));
+            addstr($win,$y, $x, "=");
+            attroff($win,COLOR_PAIR(4));
          }
          else { # heavy rainforest, very unlikely to burn
-            attron(COLOR_PAIR(4)); 
-            attron(A_BOLD);
+            attron($win,COLOR_PAIR(4)); 
+            attron($win,A_BOLD);
             my ($x, $y) = split /:/, $coords;
-            attroff(A_BOLD);
-            addstr($y, $x, "#");
-            attroff(COLOR_PAIR(4));
+            attroff($win,A_BOLD);
+            addstr($win, $y, $x, "#");
+            attroff($win,COLOR_PAIR(4));
          }
     }
     attron(COLOR_PAIR(1));
-    addstr($height + 2, 5, "Cycle: $cycle");
+    addstr($win, 0,2 , "| Cycle: $cycle |");
     attroff(COLOR_PAIR(1));
-    refresh;
+    refresh($win);
+    doupdate;
 }
 
 my $cy = 0;
