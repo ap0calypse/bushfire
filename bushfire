@@ -17,16 +17,14 @@ print "How long should the area be? (leave blank for maximum): ";
 chomp(my $length = <STDIN>);
 print "How high should the area be? (leave blank for maximum): ";
 chomp(my $height = <STDIN>);
-print "Maximum level for vegetation (lower means easier burn-able, leave blank for default; default is 7): ";
-chomp(my $max_veg = <STDIN>);
-print "Percentage for starting a fire (leave blank for default; default is 1): ";
+print "Percentage for starting a fire (leave blank for default; default is 5): ";
 chomp(my $percentage = <STDIN>);
 print "Microseconds between screen refreshs (leave blank for default; default is 100000): ";
 chomp(my $microsecs = <STDIN>);
 
-$max_veg = 7 if $max_veg !~ m/\d+/;
+my $max_veg = 3;
 $microsecs = 100000 if $microsecs !~ m/\d+/;
-$percentage = 1 if $percentage !~ m/\d+/;
+$percentage = 5 if $percentage !~ m/\d+/;
 
 initscr;
 if($length eq "" || $length > $COLS - 2) { $length = $COLS - 2; }
@@ -44,10 +42,11 @@ sub print_area {
     noecho;
 
     start_color;
-    init_pair(1, COLOR_RED, COLOR_BLACK); # ACTIVE FIRE
-    init_pair(2, COLOR_BLACK, COLOR_BLACK); # GLOWING AFTER FIRE
-    init_pair(3, COLOR_YELLOW, COLOR_BLACK); # PLANTS soon burning
-    init_pair(4, COLOR_GREEN, COLOR_BLACK); # PLANTS
+    init_pair(1, 1, 0); # ACTIVE FIRE
+    init_pair(2, 0, 0); # BURNT FIELD
+    init_pair(3, 11, 0); # GRASS
+    init_pair(4, 2, 0); # SHRUBS
+    init_pair(5, 10, 0); # TREES
     my $win = newwin($height + 2, $length + 2, 0, 0);
     box($win,0,0);
     my ($f, $f_b, $f_0, $f_1, $f_2, $f_3) = (0,0,0,0,0,0);
@@ -58,7 +57,7 @@ sub print_area {
             attron($win,COLOR_PAIR(1));
             attron($win,A_BOLD);
             my ($x, $y) = split /:/, $coords;
-            addstr($win, $y, $x, "~");
+            addstr($win, $y, $x, 'W');
             attroff($win,A_BOLD);
             attroff($win,COLOR_PAIR(1));
          }
@@ -66,36 +65,35 @@ sub print_area {
             $f_b++;
             attron($win,COLOR_PAIR(2));
             my ($x, $y) = split /:/, $coords;
-            addstr($win, $y, $x, "");
+            addstr($win, $y, $x, '');
             attroff($win,COLOR_PAIR(2));
          }
          elsif ($area->{$coords} == 1) { # small vegetation very likely to burn
             $f_1++;
             attron($win,COLOR_PAIR(3));
             my ($x, $y) = split /:/, $coords;
-            addstr($win, $y, $x, ".");
+            addstr($win, $y, $x, '*');
             attroff($win,COLOR_PAIR(3));
          }
-         elsif ($area->{$coords} > 1 && $area->{$coords} < 5) { # normal vegetation
+         elsif ($area->{$coords} == 2 ) { # normal vegetation
             $f_2++;
             attron($win,COLOR_PAIR(4));
             my ($x, $y) = split /:/, $coords;
-            addstr($win,$y, $x, ":");
+            addstr($win,$y, $x, '#');
             attroff($win,COLOR_PAIR(4));
          }
          else { # heavy rainforest, very unlikely to burn
             $f_3++;
-            attron($win,COLOR_PAIR(4)); 
-            attron($win,A_BOLD);
+            attron($win,COLOR_PAIR(5)); 
             my ($x, $y) = split /:/, $coords;
-            attroff($win,A_BOLD);
-            addstr($win, $y, $x, "|");
-            attroff($win,COLOR_PAIR(4));
+            addstr($win, $y, $x, '@');
+            attroff($win,COLOR_PAIR(5));
          }
     }
     attron(COLOR_PAIR(1));
-    addstr($win, 0,2 , "| Cycle: $cycle | Fields: $f | Burning: $f_0 | " .
-                       "Burnt: $f_b | grass fiels: $f_1 | shrub fields: $f_2 | tree fields $f_3 |");
+    addstr($win, 0,2 , "| cycle: $cycle | fields: $f | burning: $f_0 | " .
+                       "burnt: $f_b |");
+    addstr($win, $height+1,2,"| grass (*): $f_1 | shrubs (#): $f_2 | trees (\@): $f_3 |");
     attroff(COLOR_PAIR(1));
     refresh($win);
     doupdate;
@@ -116,29 +114,34 @@ sub start_fire {
 
 while (1) {
     $cy++;
-    if (int rand(100) < $percentage) { # possibility of starting a fire ( 2 % )
+    if (int rand(100) < $percentage) { 
         &start_fire;
     }
-    my @decrement;
+    my %decrement;
     for my $coords (keys %{$area}) {
         if ($area->{$coords} == 0) {
             my ($x, $y) = split /:/, $coords;
             my ($l_x, $u_x, $l_y, $u_y) = ($x-1,$x+1,$y-1,$y+1);
+            $area->{"$x:$y"}-- if defined $area->{"$x:$y"};
             for my $X ($l_x .. $u_x) {
                 for my $Y ($l_y .. $u_y) {
-                    $area->{"$X:$Y"}-- if defined $area->{"$X:$Y"};
-                    push @decrement, "$X:$Y" if defined $area->{"$X:$Y"};
+                    $decrement{"$X:$Y"} += 1 if defined $area->{"$X:$Y"} and ("$X:$Y" ne "$x:$y");
                 }
             }
         }
-        if (($cy%100) == 0) { # plants grow, and die
-            $area->{$coords} += (int rand(3)) if $area->{$coords} > 0 && $area->{$coords} < $max_veg;
+        if (($cy%100) == 0) { # plants grow, ...
+            $area->{$coords} += (int rand(2)) if $area->{$coords} > 0 && $area->{$coords} < $max_veg;
             $area->{$coords} = (int(rand 2) + 1) if $area->{$coords} < 0;
-            $area->{$coords} -= (int rand($max_veg)) if $area->{$coords} >= $max_veg;
+        }
+        if (($cy%333) == 0) { # ... and die
+            $area->{$coords} -= (int rand(2)) if $area->{$coords} >= $max_veg;
+            $area->{$coords} -= (int rand(2)) if $area->{$coords} == 2;
         }
     }
-    for (@decrement) { # burn it down
-        $area->{$_}-- if $area->{$_} > 0;
+    for (keys %decrement) { # burn it down
+        if (($area->{$_} - $decrement{$_}) < 1) {
+            $area->{$_} -= $decrement{$_};
+        }
     }
     &print_area($cy);
     usleep($microsecs);
