@@ -36,8 +36,10 @@ for my $x (1 .. $length) {
     }
 }
 
+my ($f, $f_b, $f_0, $f_1, $f_2, $f_3) = (0,0,0,0,0,0);
+my ($win, $coords, $cycle);
 sub print_area {
-    my $cycle = shift;
+    $cycle = shift;
     clear;
     noecho;
 
@@ -47,16 +49,16 @@ sub print_area {
     init_pair(3, 11, 0); # GRASS
     init_pair(4, 2, 0); # SHRUBS
     init_pair(5, 10, 0); # TREES
-    my $win = newwin($height + 2, $length + 2, 0, 0);
+    $win = newwin($height + 2, $length + 2, 0, 0);
     box($win,0,0);
-    my ($f, $f_b, $f_0, $f_1, $f_2, $f_3) = (0,0,0,0,0,0);
-    for my $coords (keys %{$area}) {
+    my ($x, $y);
+    for $coords (keys %{$area}) {
         $f++;
          if ($area->{$coords} == 0) { # burn motherfucker .. burn
             $f_0++;
             attron($win,COLOR_PAIR(1));
             attron($win,A_BOLD);
-            my ($x, $y) = split /:/, $coords;
+            ($x, $y) = split /:/, $coords;
             addstr($win, $y, $x, 'W');
             attroff($win,A_BOLD);
             attroff($win,COLOR_PAIR(1));
@@ -64,32 +66,33 @@ sub print_area {
          elsif ($area->{$coords} < 0) { # empty, burned field 
             $f_b++;
             attron($win,COLOR_PAIR(2));
-            my ($x, $y) = split /:/, $coords;
+            ($x, $y) = split /:/, $coords;
             addstr($win, $y, $x, '');
             attroff($win,COLOR_PAIR(2));
          }
          elsif ($area->{$coords} == 1) { # small vegetation very likely to burn
             $f_1++;
             attron($win,COLOR_PAIR(3));
-            my ($x, $y) = split /:/, $coords;
+            ($x, $y) = split /:/, $coords;
             addstr($win, $y, $x, '*');
             attroff($win,COLOR_PAIR(3));
          }
          elsif ($area->{$coords} == 2 ) { # normal vegetation
             $f_2++;
             attron($win,COLOR_PAIR(4));
-            my ($x, $y) = split /:/, $coords;
+            ($x, $y) = split /:/, $coords;
             addstr($win,$y, $x, '#');
             attroff($win,COLOR_PAIR(4));
          }
          else { # heavy rainforest, very unlikely to burn
             $f_3++;
             attron($win,COLOR_PAIR(5)); 
-            my ($x, $y) = split /:/, $coords;
+            ($x, $y) = split /:/, $coords;
             addstr($win, $y, $x, '@');
             attroff($win,COLOR_PAIR(5));
          }
     }
+    ($x,$y) = (undef, undef);
     attron(COLOR_PAIR(1));
     addstr($win, 0,2 , "| cycle: $cycle | fields: $f | burning: $f_0 | " .
                        "burnt: $f_b |");
@@ -97,12 +100,12 @@ sub print_area {
     attroff(COLOR_PAIR(1));
     refresh($win);
     doupdate;
+    delwin($win);
+    ($f, $f_b, $f_0, $f_1, $f_2, $f_3) = (0,0,0,0,0,0);
 }
 
-my $cy = 0;
-
+my @burnables;
 sub start_fire {
-    my @burnables;
     for (keys %{$area}) {
         if ($area->{$_} == 1) {
             push @burnables, $_;
@@ -110,32 +113,35 @@ sub start_fire {
     }
     my $random = rand scalar @burnables;
     $area->{$burnables[$random]}-- if defined $area->{$burnables[$random]};
+    @burnables = undef;
 }
 
+my $cy = 0;
+my (%decrement, $xy, $X, $Y, $x, $y, $l_x, $u_x, $l_y, $u_y);
 while (1) {
     $cy++;
     if (int rand(100) < $percentage) { 
         &start_fire;
     }
-    my %decrement;
-    for my $coords (keys %{$area}) {
-        if ($area->{$coords} == 0) {
-            my ($x, $y) = split /:/, $coords;
-            my ($l_x, $u_x, $l_y, $u_y) = ($x-1,$x+1,$y-1,$y+1);
+    for $xy (keys %{$area}) {
+        if ($area->{$xy} == 0) {
+            ($x, $y) = split /:/, $xy;
+            ($l_x, $u_x, $l_y, $u_y) = ($x-1,$x+1,$y-1,$y+1);
             $area->{"$x:$y"}-- if defined $area->{"$x:$y"};
-            for my $X ($l_x .. $u_x) {
-                for my $Y ($l_y .. $u_y) {
+            for $X ($l_x .. $u_x) {
+                for $Y ($l_y .. $u_y) {
                     $decrement{"$X:$Y"} += 1 if defined $area->{"$X:$Y"} and ("$X:$Y" ne "$x:$y");
                 }
             }
+            ($X,$Y) = (undef,undef);
         }
         if (($cy%100) == 0) { # plants grow, ...
-            $area->{$coords} += (int rand(2)) if $area->{$coords} > 0 && $area->{$coords} < $max_veg;
-            $area->{$coords} = (int(rand 2) + 1) if $area->{$coords} < 0;
+            $area->{$xy} += (int rand(2)) if $area->{$xy} > 0 && $area->{$xy} < $max_veg;
+            $area->{$xy} = (int(rand 2) + 1) if $area->{$xy} < 0;
         }
         if (($cy%333) == 0) { # ... and die
-            $area->{$coords} -= (int rand(2)) if $area->{$coords} >= $max_veg;
-            $area->{$coords} -= (int rand(2)) if $area->{$coords} == 2;
+            $area->{$xy} -= (int rand(2)) if $area->{$xy} >= $max_veg;
+            $area->{$xy} -= (int rand(2)) if $area->{$xy} == 2;
         }
     }
     for (keys %decrement) { # burn it down
@@ -143,7 +149,9 @@ while (1) {
             $area->{$_} -= $decrement{$_};
         }
     }
+    %decrement = ();
     &print_area($cy);
     usleep($microsecs);
+    ($xy, $x, $y, $X, $Y, $l_x, $u_x, $l_y, $u_y) = 
+    (undef, undef, undef, undef, undef, undef, undef, undef, undef);
 }
-
