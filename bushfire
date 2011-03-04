@@ -19,11 +19,17 @@ print "How high should the area be? (leave blank for maximum): ";
 chomp(my $height = <STDIN>);
 print "Percentage for starting a fire (leave blank for default; default is 5): ";
 chomp(my $percentage = <STDIN>);
+print "Cycles between plants grow (leave blank for default; default is 250): ";
+chomp(my $growth = <STDIN>);
+print "Cycles between plants die (leave blank for default; default is 900): ";
+chomp(my $death = <STDIN>);
 print "Microseconds between screen refreshs (leave blank for default; default is 100000): ";
 chomp(my $microsecs = <STDIN>);
 
 my $max_veg = 3;
 $microsecs = 100000 if $microsecs !~ m/\d+/;
+$death = 900 if $death !~ m/\d+/;
+$growth = 250 if $growth !~ m/\d+/;
 $percentage = 5 if $percentage !~ m/\d+/;
 
 initscr;
@@ -37,7 +43,7 @@ for my $x (1 .. $length) {
 }
 
 my ($f, $f_b, $f_0, $f_1, $f_2, $f_3) = (0,0,0,0,0,0);
-my ($win, $coords, $cycle);
+my ($win, $coords, $cycle, $info);
 sub print_area {
     $cycle = shift;
     clear;
@@ -92,6 +98,16 @@ sub print_area {
             attroff($win,COLOR_PAIR(5));
          }
     }
+    if ($cycle/$growth == 1) {
+        $info = newwin(3, 20, int $height/2, ($length/2) - 10);
+        box($info, 0,0);
+        addstr($info, 1,1, "plants grow!");
+    }
+    elsif ($cycle/$death == 1) {
+        $info = newwin(3, 20, int $height/2, ($length/2) - 10);
+        box($info,0,0);
+        addstr($info, 1,1, "plants die!");
+    }
     ($x,$y) = (undef, undef);
     attron(COLOR_PAIR(1));
     addstr($win, 0,2 , "| cycle: $cycle | fields: $f | burning: $f_0 | " .
@@ -99,8 +115,10 @@ sub print_area {
     addstr($win, $height+1,2,"| grass (*): $f_1 | shrubs (#): $f_2 | trees (\@): $f_3 |");
     attroff(COLOR_PAIR(1));
     refresh($win);
+    refresh($info) if $info;
     doupdate;
     delwin($win);
+    delwin($info) if $info;
     ($f, $f_b, $f_0, $f_1, $f_2, $f_3) = (0,0,0,0,0,0);
 }
 
@@ -120,6 +138,7 @@ my $cy = 0;
 my (%decrement, $xy, $X, $Y, $x, $y, $l_x, $u_x, $l_y, $u_y);
 while (1) {
     $cy++;
+    &print_area($cy);
     if (int rand(100) < $percentage) { 
         &start_fire;
     }
@@ -135,22 +154,27 @@ while (1) {
             }
             ($X,$Y) = (undef,undef);
         }
-        if (($cy%100) == 0) { # plants grow, ...
+        if (($cy % $growth) == 0) { # plants grow, ...
             $area->{$xy} += (int rand(2)) if $area->{$xy} > 0 && $area->{$xy} < $max_veg;
-            $area->{$xy} = (int(rand 2) + 1) if $area->{$xy} < 0;
+            $area->{$xy} = (int rand(2)) + 1 if $area->{$xy} < 0;
         }
-        if (($cy%333) == 0) { # ... and die
+        if (($cy % $death) == 0) { # ... and die
             $area->{$xy} -= (int rand(2)) if $area->{$xy} >= $max_veg;
             $area->{$xy} -= (int rand(2)) if $area->{$xy} == 2;
         }
     }
     for (keys %decrement) { # burn it down
-        if (($area->{$_} - $decrement{$_}) < 1) {
-            $area->{$_} -= $decrement{$_};
+        if ($area->{$_} == 3 && $decrement{$_} >= 4) {  # trees should be not that easy to burn down
+            $area->{$_} = 0;
+        }
+        elsif ($area->{$_} == 2 && $decrement{$_} >= 2) {
+            $area->{$_} = 0;
+        }
+        elsif ($area->{$_} == 1 && $decrement{$_} >= 1) {
+            $area->{$_} = 0;
         }
     }
     %decrement = ();
-    &print_area($cy);
     usleep($microsecs);
     ($xy, $x, $y, $X, $Y, $l_x, $u_x, $l_y, $u_y) = 
     (undef, undef, undef, undef, undef, undef, undef, undef, undef);
