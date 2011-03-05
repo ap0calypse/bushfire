@@ -60,7 +60,7 @@ sub print_area {
     my ($x, $y);
     for $coords (keys %{$area}) {
         $f++;
-         if ($area->{$coords} == 0) { # burn motherfucker .. burn
+         if ($area->{$coords} == 0) { # burning field
             $f_0++;
             attron($win,COLOR_PAIR(1));
             attron($win,A_BOLD);
@@ -76,21 +76,21 @@ sub print_area {
             addstr($win, $y, $x, '');
             attroff($win,COLOR_PAIR(2));
          }
-         elsif ($area->{$coords} == 1) { # small vegetation very likely to burn
+         elsif ($area->{$coords} == 1) { # small vegetation very likely to burn -> grass
             $f_1++;
             attron($win,COLOR_PAIR(3));
             ($x, $y) = split /:/, $coords;
             addstr($win, $y, $x, '*');
             attroff($win,COLOR_PAIR(3));
          }
-         elsif ($area->{$coords} == 2 ) { # normal vegetation
+         elsif ($area->{$coords} == 2 ) { # normal vegetation -> shrubs
             $f_2++;
             attron($win,COLOR_PAIR(4));
             ($x, $y) = split /:/, $coords;
             addstr($win,$y, $x, '#');
             attroff($win,COLOR_PAIR(4));
          }
-         else { # heavy rainforest, very unlikely to burn
+         else { # heavy rainforest, very unlikely to burn -> trees
             $f_3++;
             attron($win,COLOR_PAIR(5)); 
             ($x, $y) = split /:/, $coords;
@@ -98,13 +98,13 @@ sub print_area {
             attroff($win,COLOR_PAIR(5));
          }
     }
-    if ($cycle/$growth == 1) {
-        $info = newwin(3, 20, int $height/2, ($length/2) - 10);
+    if ((($cycle % $growth) <= 5 || ($cycle % $growth) >= ($growth - 5)) && $cycle > 10) {
+        $info = newwin(3, 14, int $height/2, ($length/2) - 10);
         box($info, 0,0);
         addstr($info, 1,1, "plants grow!");
     }
-    elsif ($cycle/$death == 1) {
-        $info = newwin(3, 20, int $height/2, ($length/2) - 10);
+    elsif ((($cycle % $death) <= 5 || ($cycle % $death) >= ($death - 5)) && $cycle > 10) {
+        $info = newwin(3, 13, int $height/2, ($length/2) - 10);
         box($info,0,0);
         addstr($info, 1,1, "plants die!");
     }
@@ -119,6 +119,7 @@ sub print_area {
     doupdate;
     delwin($win);
     delwin($info) if $info;
+    $info = undef;
     ($f, $f_b, $f_0, $f_1, $f_2, $f_3) = (0,0,0,0,0,0);
 }
 
