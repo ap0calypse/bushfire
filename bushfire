@@ -62,40 +62,23 @@ sub print_area {
         $f++;
          if ($area->{$coords} == 0) { # burning field
             $f_0++;
-            attron($win,COLOR_PAIR(1));
-            attron($win,A_BOLD);
-            ($x, $y) = split /:/, $coords;
-            addstr($win, $y, $x, 'W');
-            attroff($win,A_BOLD);
-            attroff($win,COLOR_PAIR(1));
+            &draw_field(1,'W',$coords);
          }
          elsif ($area->{$coords} < 0) { # empty, burned field 
             $f_b++;
-            attron($win,COLOR_PAIR(2));
-            ($x, $y) = split /:/, $coords;
-            addstr($win, $y, $x, '');
-            attroff($win,COLOR_PAIR(2));
+            &draw_field(2,'',$coords);
          }
          elsif ($area->{$coords} == 1) { # small vegetation very likely to burn -> grass
             $f_1++;
-            attron($win,COLOR_PAIR(3));
-            ($x, $y) = split /:/, $coords;
-            addstr($win, $y, $x, '*');
-            attroff($win,COLOR_PAIR(3));
+            &draw_field(3,'*',$coords);
          }
          elsif ($area->{$coords} == 2 ) { # normal vegetation -> shrubs
             $f_2++;
-            attron($win,COLOR_PAIR(4));
-            ($x, $y) = split /:/, $coords;
-            addstr($win,$y, $x, '#');
-            attroff($win,COLOR_PAIR(4));
+            &draw_field(4,'#',$coords);
          }
          else { # heavy rainforest, very unlikely to burn -> trees
             $f_3++;
-            attron($win,COLOR_PAIR(5)); 
-            ($x, $y) = split /:/, $coords;
-            addstr($win, $y, $x, '@');
-            attroff($win,COLOR_PAIR(5));
+            &draw_field(5,'@',$coords);
          }
     }
     if ((($cycle % $growth) <= 5 || ($cycle % $growth) >= ($growth - 5)) && $cycle > 10) {
@@ -121,6 +104,14 @@ sub print_area {
     delwin($info) if $info;
     $info = undef;
     ($f, $f_b, $f_0, $f_1, $f_2, $f_3) = (0,0,0,0,0,0);
+}
+
+sub draw_field {
+    my ($color, $char, $coords) = @_;
+    attron($win,COLOR_PAIR($color));
+    my ($x, $y) = split /:/, $coords;
+    addstr($win, $y, $x, $char);
+    attroff($win,COLOR_PAIR($color));
 }
 
 my @burnables;
