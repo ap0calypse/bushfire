@@ -52,9 +52,9 @@ sub print_area {
     start_color;
     init_pair(1, 1, 0); # ACTIVE FIRE
     init_pair(2, 0, 0); # BURNT FIELD
-    init_pair(3, 11, 0); # GRASS
+    init_pair(3, 2, 0); # GRASS
     init_pair(4, 2, 0); # SHRUBS
-    init_pair(5, 10, 0); # TREES
+    init_pair(5, 2, 0); # TREES
     $win = newwin($height + 2, $length + 2, 0, 0);
     box($win,0,0);
     my ($x, $y);
