@@ -107,11 +107,10 @@ sub print_area {
 }
 
 sub draw_field {
-    my ($color, $char, $coords) = @_;
-    attron($win,COLOR_PAIR($color));
-    my ($x, $y) = split /:/, $coords;
-    addstr($win, $y, $x, $char);
-    attroff($win,COLOR_PAIR($color));
+    attron($win,COLOR_PAIR($_[0]));
+    my ($x, $y) = split /:/, $_[2];
+    addstr($win, $y, $x, $_[1]);
+    attroff($win,COLOR_PAIR($_[0]));
 }
 
 my @burnables;
